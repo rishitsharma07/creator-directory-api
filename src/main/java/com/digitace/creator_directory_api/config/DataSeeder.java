@@ -23,22 +23,57 @@ public class DataSeeder implements CommandLineRunner {
         // 1. Create the Tenants
         Agency nova = agencyRepository.save(Agency.builder().name("Nova Talent").plan(PlanType.FREE).build());
         Agency brightStar = agencyRepository.save(Agency.builder().name("Bright Star Agency").plan(PlanType.PRO).build());
+        Agency solo = agencyRepository.save(
+                Agency.builder()
+                        .name("Solo Creators Co")
+                        .plan(PlanType.FREE)
+                        .build()
+        );
 
         // 2. Create the Users (Letting the DB generate the UUIDs this time)
         User novaUser = userRepository.save(User.builder().agency(nova).email("owner@nova.com").role(RoleType.OWNER).build());
         User brightStarUser = userRepository.save(User.builder().agency(brightStar).email("owner@brightstar.com").role(RoleType.OWNER).build());
+        User novaAdmin = userRepository.save(
+                User.builder()
+                        .agency(nova)
+                        .email("admin@nova.com")
+                        .role(RoleType.ADMIN)
+                        .build()
+        );
 
+        User soloOwner = userRepository.save(
+                User.builder()
+                        .agency(solo)
+                        .email("owner@solo.com")
+                        .role(RoleType.OWNER)
+                        .build()
+        );
         // 3. Create the Core Creators
         Creator priya = creatorRepository.save(Creator.builder().name("Priya Sharma").niche("beauty").followerCount(45000).engagementRate(3.8).email("priya@example.com").build());
         Creator rahul = creatorRepository.save(Creator.builder().name("Rahul Verma").niche("fitness").followerCount(120000).engagementRate(2.1).email("rahul@example.com").build());
-
+        Creator ananya = creatorRepository.save(
+                Creator.builder()
+                        .name("Ananya Iyer")
+                        .niche("travel")
+                        .followerCount(8000)
+                        .engagementRate(6.4)
+                        .email("ananya@example.com")
+                        .build()
+        );
         // 4. The Isolation Test: Both agencies link to Priya, but with DIFFERENT private notes
         linkRepository.save(AgencyCreatorLink.builder().agency(nova).creator(priya).notes("Great for skincare campaigns").build());
         linkRepository.save(AgencyCreatorLink.builder().agency(brightStar).creator(priya).notes("Booked for Q1 shoot").build());
 
         // Only Bright Star links to Rahul
         linkRepository.save(AgencyCreatorLink.builder().agency(brightStar).creator(rahul).notes("High reach, slower replies").build());
-
+        // Nova links to Ananya
+        linkRepository.save(
+                AgencyCreatorLink.builder()
+                        .agency(nova)
+                        .creator(ananya)
+                        .notes("Micro-influencer, very responsive")
+                        .build()
+        );
         System.out.println("\n=========================================================");
         System.out.println("DATABASE SEEDED SUCCESSFULLY.");
         System.out.println("TEST NOVA TALENT (Header)   -> X-User-Id: " + novaUser.getId());
