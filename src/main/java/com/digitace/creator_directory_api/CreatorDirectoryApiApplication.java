@@ -1,0 +1,13 @@
+package com.digitace.creator_directory_api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class CreatorDirectoryApiApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(CreatorDirectoryApiApplication.class, args);
+	}
+
+}
