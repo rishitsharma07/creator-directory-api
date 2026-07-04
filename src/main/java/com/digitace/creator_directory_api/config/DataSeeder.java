@@ -24,10 +24,14 @@ public class DataSeeder implements CommandLineRunner {
         Agency nova = agencyRepository.save(Agency.builder().name("Nova Talent").plan(PlanType.FREE).build());
         Agency brightStar = agencyRepository.save(Agency.builder().name("Bright Star Agency").plan(PlanType.PRO).build());
         Agency soloCreators = agencyRepository.save(Agency.builder().name("Solo Creators Co").plan(PlanType.FREE).build());
+
         // 2. Create the Users (Letting the DB generate the UUIDs this time)
         User novaUser = userRepository.save(User.builder().agency(nova).email("owner@nova.com").role(RoleType.OWNER).build());
         User brightStarUser = userRepository.save(User.builder().agency(brightStar).email("owner@brightstar.com").role(RoleType.OWNER).build());
         User soloUser = userRepository.save(User.builder().agency(soloCreators).email("owner@solo.com").role(RoleType.OWNER).build());
+        // From main: a second user in Nova Talent -- needed later to test
+        // "admin can invite, member can't" role checks on the Users API
+        User novaAdmin = userRepository.save(User.builder().agency(nova).email("admin@nova.com").role(RoleType.ADMIN).build());
 
         // 3. Create the Core Creators
         Creator priya = creatorRepository.save(Creator.builder().name("Priya Sharma").niche("beauty").followerCount(45000).engagementRate(3.8).email("priya@example.com").build());
@@ -41,16 +45,17 @@ public class DataSeeder implements CommandLineRunner {
         // Only Bright Star links to Rahul
         linkRepository.save(AgencyCreatorLink.builder().agency(brightStar).creator(rahul).notes("High reach, slower replies").build());
 
-        // only Nova links to Ananya -- Solo Creators Co is deliberately
+        // Only Nova links to Ananya -- Solo Creators Co is deliberately
         // linked to NOTHING, so it's the agency you use to test "GET
         // /creators/{id} on a creator I have no link to -> 404"
         linkRepository.save(AgencyCreatorLink.builder().agency(nova).creator(ananya).notes("Micro-influencer, very responsive").build());
 
         System.out.println("\n=========================================================");
         System.out.println("DATABASE SEEDED SUCCESSFULLY.");
-        System.out.println("TEST NOVA TALENT (Header)   -> X-User-Id: " + novaUser.getId());
-        System.out.println("TEST BRIGHT STAR (Header)   -> X-User-Id: " + brightStarUser.getId());
-        System.out.println("TEST SOLO CREATORS (Header) -> X-User-Id: " + soloUser.getId());
+        System.out.println("TEST NOVA TALENT OWNER (Header) -> X-User-Id: " + novaUser.getId());
+        System.out.println("TEST NOVA TALENT ADMIN (Header) -> X-User-Id: " + novaAdmin.getId());
+        System.out.println("TEST BRIGHT STAR (Header)       -> X-User-Id: " + brightStarUser.getId());
+        System.out.println("TEST SOLO CREATORS (Header)     -> X-User-Id: " + soloUser.getId());
         System.out.println("=========================================================\n");
     }
 }
