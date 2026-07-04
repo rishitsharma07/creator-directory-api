@@ -10,13 +10,12 @@ import java.util.TimeZone;
 @SpringBootApplication(exclude = { SecurityAutoConfiguration.class })
 public class CreatorDirectoryApiApplication {
 
-    @PostConstruct
-    public void init() {
-        // Forces the JVM to UTC, bypassing the Asia/Calcutta DB rejection
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-    }
 
     public static void main(String[] args) {
+
+        // Force JVM timezone before Spring starts
+        System.setProperty("user.timezone", "UTC");
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         SpringApplication.run(CreatorDirectoryApiApplication.class, args);
     }
 }
