@@ -6,10 +6,13 @@ import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
 import com.digitace.creator_directory_api.domain.Creator;
 import com.digitace.creator_directory_api.domain.PlanType;
 import com.digitace.creator_directory_api.dto.CreateCreatorDto;
+import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
 import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
 import com.digitace.creator_directory_api.repository.AgencyRepository;
 import com.digitace.creator_directory_api.repository.CreatorRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +29,11 @@ public class CreatorService {
     private final CreatorRepository creatorRepository;
     private final AgencyCreatorLinkRepository linkRepository;
 
+    // --- DAY 3: INGESTION ---
     @Transactional
     public void addCreatorToAgency(CreateCreatorDto dto) {
         UUID agencyId = TenantContext.getAgencyId();
 
-        // 1. The Limit Check
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agency not found"));
 
@@ -42,34 +45,26 @@ public class CreatorService {
             }
         }
 
-        // 2. The Global Search
         Optional<Creator> existingCreator = creatorRepository.findByEmail(dto.getEmail());
-
         Creator creatorToLink;
 
         if (existingCreator.isPresent()) {
-            // 3A. The Fork: Creator exists. We only link them.
             creatorToLink = existingCreator.get();
-
-            // Safety check: Prevent the agency from adding the exact same creator twice
             Optional<AgencyCreatorLink> existingLink = linkRepository.findIsolatedByCreatorId(creatorToLink.getId());
             if (existingLink.isPresent()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Creator is already in your directory.");
             }
         } else {
-            // 3B. The Fork: Brand new creator. Save to global database first.
             Creator newCreator = Creator.builder()
                     .name(dto.getName())
                     .email(dto.getEmail())
                     .niche(dto.getNiche())
-                    // Fix: Explicitly cast Member 1's long to match the database's integer
                     .followerCount((int) dto.getFollowerCount())
                     .engagementRate(dto.getEngagementRate())
                     .build();
             creatorToLink = creatorRepository.save(newCreator);
         }
 
-        // 4. Secure the link with the agency's private notes
         AgencyCreatorLink newLink = AgencyCreatorLink.builder()
                 .agency(agency)
                 .creator(creatorToLink)
@@ -77,5 +72,51 @@ public class CreatorService {
                 .build();
 
         linkRepository.save(newLink);
+    }
+
+    // --- DAY 4: MUTATION & SEARCH (New Logic) ---
+
+    @Transactional
+    public void updateCreator(UUID creatorId, UpdateCreatorDto dto) {
+        // 1. Verify the agency has this creator in their isolated directory
+        AgencyCreatorLink link = linkRepository.findIsolatedByCreatorId(creatorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found in your directory"));
+
+        // 2. Update the agency's private notes
+        if (dto.getNotes() != null && !dto.getNotes().trim().isEmpty()) {
+            link.setNotes(dto.getNotes());
+        }
+
+        // 3. Sync the global stats if provided
+        Creator creator = link.getCreator();
+        if (dto.getFollowerCount() != null) {
+            creator.setFollowerCount(dto.getFollowerCount().intValue());
+        }
+        if (dto.getEngagementRate() != null) {
+            creator.setEngagementRate(dto.getEngagementRate());
+        }
+
+        // 4. Save both the private link and the global creator
+        creatorRepository.save(creator);
+        linkRepository.save(link);
+    }
+
+    @Transactional
+    public void removeCreatorFromDirectory(UUID creatorId) {
+        // 1. Find the exact link securing this creator to this specific agency
+        AgencyCreatorLink link = linkRepository.findIsolatedByCreatorId(creatorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found in your directory"));
+
+        // 2. SEVER PROTOCOL: Delete ONLY the link.
+        linkRepository.delete(link);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AgencyCreatorLink> searchAgencyCreators(String niche, Long minFollowers, Pageable pageable) {
+        // Handling nulls to pass default fallbacks safely
+        String searchNiche = (niche != null && !niche.trim().isEmpty()) ? niche : null;
+
+        // We seamlessly hook into Member 1's highly secure repository query
+        return linkRepository.searchIsolated(searchNiche, minFollowers, pageable);
     }
 }
