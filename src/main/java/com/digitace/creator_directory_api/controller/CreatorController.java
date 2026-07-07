@@ -2,6 +2,13 @@ package com.digitace.creator_directory_api.controller;
 
 import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
 import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
+import com.digitace.creator_directory_api.service.CreatorService;
+import com.digitace.creator_directory_api.dto.CreatorResponse;
+import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import com.digitace.creator_directory_api.dto.CreateCreatorRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,7 +25,7 @@ import java.util.stream.Collectors;
 public class CreatorController {
 
     private final AgencyCreatorLinkRepository linkRepository;
-
+    private final CreatorService creatorService;
     @GetMapping
     public ResponseEntity<?> getCreators(
             @RequestParam(defaultValue = "0") int page,
@@ -46,5 +53,43 @@ public class CreatorController {
         )).collect(Collectors.toList());
 
         return ResponseEntity.ok(response);
+    }
+    @PostMapping
+    public ResponseEntity<CreatorResponse> createCreator(
+            @Valid @RequestBody CreateCreatorRequest request) {
+
+        CreatorResponse response = creatorService.createCreator(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateCreator(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCreatorDto request) {
+
+        return ResponseEntity.ok(
+                creatorService.updateCreator(id, request)
+        );
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCreator(
+            @PathVariable UUID id) {
+
+        creatorService.deleteCreator(id);
+
+        return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/search")
+    public ResponseEntity<?> searchCreators(
+
+            @RequestParam(required = false) String niche,
+
+            @RequestParam(required = false) Integer minFollowers) {
+
+        return ResponseEntity.ok(
+                creatorService.searchCreators(niche, minFollowers)
+        );
     }
 }
