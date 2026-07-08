@@ -2,6 +2,7 @@ package com.digitace.creator_directory_api.controller;
 
 import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
 import com.digitace.creator_directory_api.dto.CreateCreatorDto;
+import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
 import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
 import com.digitace.creator_directory_api.service.CreatorService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -57,5 +59,44 @@ public class CreatorController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", "Creator successfully added to your directory."));
+    }
+
+    // --- DAY 4: MUTATION & SEARCH ---
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateCreator(@PathVariable UUID id, @Valid @RequestBody UpdateCreatorDto dto) {
+        creatorService.updateCreator(id, dto);
+        return ResponseEntity.ok(Map.of("message", "Creator updated successfully."));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCreator(@PathVariable UUID id) {
+        creatorService.removeCreatorFromDirectory(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchCreators(
+            @RequestParam(required = false) String niche,
+            @RequestParam(required = false) Long minFollowers,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        Page<AgencyCreatorLink> links = creatorService.searchAgencyCreators(niche, minFollowers, PageRequest.of(page, limit));
+
+        List<Map<String, Object>> response = links.stream().map(link -> Map.of(
+                "id", link.getCreator().getId(),
+                "name", link.getCreator().getName(),
+                "niche", link.getCreator().getNiche(),
+                "followerCount", link.getCreator().getFollowerCount(),
+                "engagementRate", link.getCreator().getEngagementRate(),
+                "email", link.getCreator().getEmail(),
+                "agencyLinks", List.of(Map.of(
+                        "agencyId", link.getAgency().getId(),
+                        "notes", link.getNotes() != null ? link.getNotes() : "",
+                        "addedAt", link.getAddedAt()
+                ))
+        )).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 }
