@@ -1,44 +1,122 @@
 package com.digitace.creator_directory_api.service;
 
+import com.digitace.creator_directory_api.context.TenantContext;
+import com.digitace.creator_directory_api.domain.Agency;
+import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
 import com.digitace.creator_directory_api.domain.Creator;
-import com.digitace.creator_directory_api.dto.CreateCreatorRequest;
-import com.digitace.creator_directory_api.dto.CreatorResponse;
-import com.digitace.creator_directory_api.repository.CreatorRepository;
+import com.digitace.creator_directory_api.domain.PlanType;
+import com.digitace.creator_directory_api.dto.CreateCreatorDto;
 import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
-import java.util.UUID;
+import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
+import com.digitace.creator_directory_api.repository.AgencyRepository;
+import com.digitace.creator_directory_api.repository.CreatorRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CreatorService {
 
+    private final AgencyRepository agencyRepository;
     private final CreatorRepository creatorRepository;
+    private final AgencyCreatorLinkRepository linkRepository;
 
-    public CreatorResponse createCreator(CreateCreatorRequest request) {
+    // --- DAY 3: INGESTION ---
+    @Transactional
+    public void addCreatorToAgency(CreateCreatorDto dto) {
+        UUID agencyId = TenantContext.getAgencyId();
 
-        Creator creator = Creator.builder()
-                .name(request.getName())
-                .niche(request.getNiche())
+        Agency agency = agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agency not found"));
+
+        if (agency.getPlan() == PlanType.FREE) {
+            long currentCreatorCount = linkRepository.countIsolatedLinks();
+            if (currentCreatorCount >= 5) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "FREE plan limit reached. Upgrade to PRO to add more creators.");
+            }
+        }
+
+        Optional<Creator> existingCreator = creatorRepository.findByEmail(dto.getEmail());
+        Creator creatorToLink;
+
+        if (existingCreator.isPresent()) {
+            creatorToLink = existingCreator.get();
+            Optional<AgencyCreatorLink> existingLink = linkRepository.findIsolatedByCreatorId(creatorToLink.getId());
+            if (existingLink.isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Creator is already in your directory.");
+            }
+        } else {
+            Creator newCreator = Creator.builder()
+                    .name(dto.getName())
+                    .email(dto.getEmail())
+                    .niche(dto.getNiche())
+                    .followerCount((int) dto.getFollowerCount())
+                    .engagementRate(dto.getEngagementRate())
+                    .build();
+            creatorToLink = creatorRepository.save(newCreator);
+        }
+
+        AgencyCreatorLink newLink = AgencyCreatorLink.builder()
+                .agency(agency)
+                .creator(creatorToLink)
+                .notes(dto.getNotes())
                 .build();
 
-        Creator savedCreator = creatorRepository.save(creator);
-
-        return CreatorResponse.builder()
-                .id(savedCreator.getId())
-                .name(savedCreator.getName())
-                .niche(savedCreator.getNiche())
-                .build();
+        linkRepository.save(newLink);
     }
-    public Object updateCreator(UUID id, UpdateCreatorDto request) {
 
-        return null;
+    // --- DAY 4: MUTATION & SEARCH (New Logic) ---
+
+    @Transactional
+    public void updateCreator(UUID creatorId, UpdateCreatorDto dto) {
+        // 1. Verify the agency has this creator in their isolated directory
+        AgencyCreatorLink link = linkRepository.findIsolatedByCreatorId(creatorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found in your directory"));
+
+        // 2. Update the agency's private notes
+        if (dto.getNotes() != null && !dto.getNotes().trim().isEmpty()) {
+            link.setNotes(dto.getNotes());
+        }
+
+        // 3. Sync the global stats if provided
+        Creator creator = link.getCreator();
+        if (dto.getFollowerCount() != null) {
+            creator.setFollowerCount(dto.getFollowerCount().intValue());
+        }
+        if (dto.getEngagementRate() != null) {
+            creator.setEngagementRate(dto.getEngagementRate());
+        }
+
+        // 4. Save both the private link and the global creator
+        creatorRepository.save(creator);
+        linkRepository.save(link);
     }
-    public void deleteCreator(UUID id) {
 
+    @Transactional
+    public void removeCreatorFromDirectory(UUID creatorId) {
+        // 1. Find the exact link securing this creator to this specific agency
+        AgencyCreatorLink link = linkRepository.findIsolatedByCreatorId(creatorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found in your directory"));
+
+        // 2. SEVER PROTOCOL: Delete ONLY the link.
+        linkRepository.delete(link);
     }
-    public Object searchCreators(String niche, Integer minFollowers) {
 
-        return null;
+    @Transactional(readOnly = true)
+    public Page<AgencyCreatorLink> searchAgencyCreators(String niche, Long minFollowers, Pageable pageable) {
+        // Handling nulls to pass default fallbacks safely
+        String searchNiche = (niche != null && !niche.trim().isEmpty()) ? niche : null;
+
+        // We seamlessly hook into Member 1's highly secure repository query
+        return linkRepository.searchIsolated(searchNiche, minFollowers, pageable);
     }
 }

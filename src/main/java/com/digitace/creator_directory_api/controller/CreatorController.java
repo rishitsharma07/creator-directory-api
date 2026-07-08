@@ -1,22 +1,21 @@
 package com.digitace.creator_directory_api.controller;
 
 import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
+import com.digitace.creator_directory_api.dto.CreateCreatorDto;
+import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
 import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
 import com.digitace.creator_directory_api.service.CreatorService;
-import com.digitace.creator_directory_api.dto.CreatorResponse;
-import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
-import java.util.UUID;
-import org.springframework.http.HttpStatus;
-import com.digitace.creator_directory_api.dto.CreateCreatorRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,15 +25,15 @@ public class CreatorController {
 
     private final AgencyCreatorLinkRepository linkRepository;
     private final CreatorService creatorService;
+
+    // --- DAY 2: THE READ ENGINE ---
     @GetMapping
     public ResponseEntity<?> getCreators(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        // 1. Fetch the isolated links (SQL automatically filters by the current Agency ID in the vault)
         Page<AgencyCreatorLink> links = linkRepository.findAllIsolated(PageRequest.of(page, limit));
 
-        // 2. Map the vault objects directly into the strict JSON format the challenge requires
         List<Map<String, Object>> response = links.stream().map(link -> Map.of(
                 "id", link.getCreator().getId(),
                 "name", link.getCreator().getName(),
@@ -42,9 +41,6 @@ public class CreatorController {
                 "followerCount", link.getCreator().getFollowerCount(),
                 "engagementRate", link.getCreator().getEngagementRate(),
                 "email", link.getCreator().getEmail(),
-
-                // We lock the array to ONLY contain this specific agency's link.
-                // A data leak is structurally impossible here.
                 "agencyLinks", List.of(Map.of(
                         "agencyId", link.getAgency().getId(),
                         "notes", link.getNotes() != null ? link.getNotes() : "",
@@ -54,42 +50,53 @@ public class CreatorController {
 
         return ResponseEntity.ok(response);
     }
+
+    // --- DAY 3: THE INGESTION ENGINE ---
     @PostMapping
-    public ResponseEntity<CreatorResponse> createCreator(
-            @Valid @RequestBody CreateCreatorRequest request) {
+    public ResponseEntity<?> addCreator(@Valid @RequestBody CreateCreatorDto dto) {
+        // The service automatically handles Free Plan limits, Global Search, and Tenant Isolation
+        creatorService.addCreatorToAgency(dto);
 
-        CreatorResponse response = creatorService.createCreator(request);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("message", "Creator successfully added to your directory."));
     }
+
+    // --- DAY 4: MUTATION & SEARCH ---
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCreator(
-            @PathVariable UUID id,
-            @Valid @RequestBody UpdateCreatorDto request) {
-
-        return ResponseEntity.ok(
-                creatorService.updateCreator(id, request)
-        );
+    public ResponseEntity<?> updateCreator(@PathVariable UUID id, @Valid @RequestBody UpdateCreatorDto dto) {
+        creatorService.updateCreator(id, dto);
+        return ResponseEntity.ok(Map.of("message", "Creator updated successfully."));
     }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCreator(
-            @PathVariable UUID id) {
-
-        creatorService.deleteCreator(id);
-
+    public ResponseEntity<Void> deleteCreator(@PathVariable UUID id) {
+        creatorService.removeCreatorFromDirectory(id);
         return ResponseEntity.noContent().build();
     }
+
     @GetMapping("/search")
     public ResponseEntity<?> searchCreators(
-
             @RequestParam(required = false) String niche,
+            @RequestParam(required = false) Long minFollowers,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
 
-            @RequestParam(required = false) Integer minFollowers) {
+        Page<AgencyCreatorLink> links = creatorService.searchAgencyCreators(niche, minFollowers, PageRequest.of(page, limit));
 
-        return ResponseEntity.ok(
-                creatorService.searchCreators(niche, minFollowers)
-        );
+        List<Map<String, Object>> response = links.stream().map(link -> Map.of(
+                "id", link.getCreator().getId(),
+                "name", link.getCreator().getName(),
+                "niche", link.getCreator().getNiche(),
+                "followerCount", link.getCreator().getFollowerCount(),
+                "engagementRate", link.getCreator().getEngagementRate(),
+                "email", link.getCreator().getEmail(),
+                "agencyLinks", List.of(Map.of(
+                        "agencyId", link.getAgency().getId(),
+                        "notes", link.getNotes() != null ? link.getNotes() : "",
+                        "addedAt", link.getAddedAt()
+                ))
+        )).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 }
