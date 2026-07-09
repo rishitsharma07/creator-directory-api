@@ -1,160 +1,168 @@
 {
   "info": {
-    "_postman_id": "f135514f-9986-4cde-b499-dbc47c022e77",
-    "name": "Creator Directory API",
-    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "_postman_id": "4662b32a-72f7-49be-9ec5-f3f29294d6f5",
+    "name": "creator-directory-api",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "56386558"
+    "_exporter_id": "50829717",
+    "_collection_link": "https://go.postman.co/collection/50829717-4662b32a-72f7-49be-9ec5-f3f29294d6f5?source=collection_link"
   },
   "item": [
     {
-      "name": "creator",
+      "name": "Tenant Isolation",
       "item": [
         {
-          "name": "GET /creators",
+          "name": "Nova sees its creators",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Returns array\", function () {\r",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": []
-          },
-          "response": []
-        },
-        {
-          "name": "GET /creators/{id}",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        },
-        {
-          "name": "POST /creators",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Rohit Singh\",\r\n  \"niche\": \"Gaming\",\r\n  \"followerCount\": 50000,\r\n  \"engagementRate\": 4.5,\r\n  \"email\": \"rohit@example.com\",\r\n  \"notes\": \"Potential gaming campaign\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:8080/creators?X-User-Id=u1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "creators"
-              ],
-              "query": [
-                {
-                  "key": "X-User-Id",
-                  "value": "u1",
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "POST /creators/{id}/link",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"notes\": \"Interested in collaboration\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:8080/creators/c1/link?X-User-Id=u1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "creators",
-                "c1",
-                "link"
-              ],
-              "query": [
-                {
-                  "key": "X-User-Id",
-                  "value": "u1",
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "PATCH /creators/{id}",
-          "request": {
-            "method": "PATCH",
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "u1",
+                "value": "{{nova_user_id}}",
                 "type": "text"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Rohit Singh\",\r\n  \"niche\": \"Gaming\",\r\n  \"followerCount\": 60000,\r\n  \"engagementRate\": 4.8,\r\n  \"email\": \"rohit@example.com\",\r\n  \"notes\": \"Updated notes\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
             "url": {
-              "raw": "http://localhost:8080/creators/c1",
-              "protocol": "http",
+              "raw": "{{base_url}}/creators",
               "host": [
-                "localhost"
+                "{{base_url}}"
               ],
-              "port": "8080",
               "path": [
-                "creators",
-                "c1"
+                "creators"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "DELETE /creators/{id}",
+          "name": "Bright Star sees its creators",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{bright_star_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Solo Creators sees nothing",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{solo_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "No header at all",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Unauthorized\", function () {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:8080/creators/c1?X-User-Id=u1",
-              "protocol": "http",
+              "raw": "{{base_url}}/creators",
               "host": [
-                "localhost"
+                "{{base_url}}"
               ],
-              "port": "8080",
               "path": [
-                "creators",
-                "c1"
+                "creators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Garbage header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Invalid user rejected\", function () {\r",
+                  "    pm.response.to.have.status(401);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "not-a-real-id",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
               ],
-              "query": [
-                {
-                  "key": "X-User-Id",
-                  "value": "u1",
-                  "type": "text"
-                }
+              "path": [
+                "creators"
               ]
             }
           },
@@ -163,47 +171,191 @@
       ]
     },
     {
-      "name": "Users",
+      "name": "Creator Lifecycle (Gauntlet)",
       "item": [
         {
-          "name": "GET /users",
+          "name": "Get all Creators",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response is an array\", function () {\r",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "u1",
+                "value": "{{nova_user_id}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "http://localhost:8080/users",
-              "protocol": "http",
+              "raw": "{{base_url}}/creators?page=0&limit=10",
               "host": [
-                "localhost"
+                "{{base_url}}"
               ],
-              "port": "8080",
               "path": [
-                "users"
+                "creators"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           },
           "response": []
         },
         {
-          "name": "POST /users",
+          "name": "Get Creator By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "const creator = pm.response.json();\r",
+                  "\r",
+                  "pm.test(\"Creator has an ID\", function () {\r",
+                  "    pm.expect(creator.id).to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Creator has a name\", function () {\r",
+                  "    pm.expect(creator.name).to.not.be.empty;\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "X-User-Id",
-                "value": "u1",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators/fd4414be-fd91-4526-a301-b272f402917f",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators",
+                "fd4414be-fd91-4526-a301-b272f402917f"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Creators",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Search successful\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Search returns array\", function () {\r",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators/search?niche=fitness",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "niche",
+                  "value": "fitness"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator updated\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains success message\", function () {\r",
+                  "    pm.expect(pm.response.text()).to.include(\"updated\");\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"email\": \"member@nova.com\",\r\n  \"role\": \"member\"\r\n}",
+              "raw": "{\r\n    \"notes\": \"Updated through Postman\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -211,14 +363,295 @@
               }
             },
             "url": {
-              "raw": "http://localhost:8080/users",
-              "protocol": "http",
+              "raw": "{{base_url}}/creators/839aeb17-432b-4bec-86ba-38f773ca32df",
               "host": [
-                "localhost"
+                "{{base_url}}"
               ],
-              "port": "8080",
               "path": [
-                "users"
+                "creators",
+                "839aeb17-432b-4bec-86ba-38f773ca32df"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator created successfully\", function () {\r",
+                  "    pm.response.to.have.status(201);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Neha Iyer\",\r\n  \"niche\": \"travel\",\r\n  \"followerCount\": 64000,\r\n  \"engagementRate\": 4.5,\r\n  \"email\": \"neha.iyer@example.com\",\r\n  \"notes\": \"Travel vlogger with high-quality content\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator deleted\", function () {\r",
+                  "    pm.response.to.have.status(204);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators/c582705f-ff9b-4e56-beb5-db5683cdb72a",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators",
+                "c582705f-ff9b-4e56-beb5-db5683cdb72a"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Free Plan Limit",
+      "item": [
+        {
+          "name": "Create Creator 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Karan Malhotra\",\r\n  \"niche\": \"technology\",\r\n  \"followerCount\": 185000,\r\n  \"engagementRate\": 4.9,\r\n  \"email\": \"karan.malhotra@example.com\",\r\n  \"notes\": \"Tech reviewer and gadget enthusiast\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Creator 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Aisha Khan\",\r\n  \"niche\": \"food\",\r\n  \"followerCount\": 92000,\r\n  \"engagementRate\": 5.7,\r\n  \"email\": \"aisha.khan@example.com\",\r\n  \"notes\": \"Excellent for restaurant and food brand campaigns\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Creator 5",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Vikram Joshi\",\r\n  \"niche\": \"fitness\",\r\n  \"followerCount\": 143000,\r\n  \"engagementRate\": 6.2,\r\n  \"email\": \"vikram.joshi@example.com\",\r\n  \"notes\": \"Ideal for health and fitness promotions\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Creator 6",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Free plan limit enforced\", function () {\r",
+                  "    pm.response.to.have.status(403);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{nova_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Meera Nair\",\r\n  \"niche\": \"lifestyle\",\r\n  \"followerCount\": 118000,\r\n  \"engagementRate\": 5.3,\r\n  \"email\": \"meera.nair@example.com\",\r\n  \"notes\": \"Lifestyle creator for premium brand collaborations\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/creators",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": "",
+                  "type": "text",
+                  "disabled": true
+                }
               ]
             }
           },
