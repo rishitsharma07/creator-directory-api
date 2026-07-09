@@ -34,21 +34,19 @@ public class CreatorController {
 
         Page<AgencyCreatorLink> links = linkRepository.findAllIsolated(PageRequest.of(page, limit));
 
-        List<Map<String, Object>> response = links.stream().map(link -> Map.of(
-                "id", link.getCreator().getId(),
-                "name", link.getCreator().getName(),
-                "niche", link.getCreator().getNiche(),
-                "followerCount", link.getCreator().getFollowerCount(),
-                "engagementRate", link.getCreator().getEngagementRate(),
-                "email", link.getCreator().getEmail(),
-                "agencyLinks", List.of(Map.of(
-                        "agencyId", link.getAgency().getId(),
-                        "notes", link.getNotes() != null ? link.getNotes() : "",
-                        "addedAt", link.getAddedAt()
-                ))
-        )).collect(Collectors.toList());
+        List<Map<String, Object>> response = links.stream()
+                .map(this::toCreatorResponse)
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCreatorById(@PathVariable UUID id) {
+        return linkRepository.findIsolatedByCreatorId(id)
+                .map(this::toCreatorResponse)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // --- DAY 3: THE INGESTION ENGINE ---
@@ -62,7 +60,7 @@ public class CreatorController {
     }
 
     // --- DAY 4: MUTATION & SEARCH ---
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<?> updateCreator(@PathVariable UUID id, @Valid @RequestBody UpdateCreatorDto dto) {
         creatorService.updateCreator(id, dto);
         return ResponseEntity.ok(Map.of("message", "Creator updated successfully."));
@@ -83,7 +81,21 @@ public class CreatorController {
 
         Page<AgencyCreatorLink> links = creatorService.searchAgencyCreators(niche, minFollowers, PageRequest.of(page, limit));
 
-        List<Map<String, Object>> response = links.stream().map(link -> Map.of(
+        List<Map<String, Object>> response = links.stream()
+                .map(this::toCreatorResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Shared JSON shape for a single creator, as seen by the caller's own
+     * agency. Used by every read endpoint (list, single, search) so the
+     * schema only lives in one place
+     */
+
+    private Map<String, Object> toCreatorResponse(AgencyCreatorLink link) {
+        return Map.of(
                 "id", link.getCreator().getId(),
                 "name", link.getCreator().getName(),
                 "niche", link.getCreator().getNiche(),
@@ -95,8 +107,6 @@ public class CreatorController {
                         "notes", link.getNotes() != null ? link.getNotes() : "",
                         "addedAt", link.getAddedAt()
                 ))
-        )).collect(Collectors.toList());
-
-        return ResponseEntity.ok(response);
+        );
     }
 }
