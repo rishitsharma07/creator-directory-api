@@ -33,16 +33,22 @@ public class UserService {
     public User inviteUser(InviteUserDto dto) {
         RoleType callerRole = TenantContext.getRole();
 
+        // 1. Members cannot invite anyone
         if (callerRole == RoleType.MEMBER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Members cannot invite users");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Members cannot invite users.");
+        }
+
+        // 2. Admins cannot create Owners (Privilege Escalation Protection)
+        if (callerRole == RoleType.ADMIN && dto.getRole() == RoleType.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admins cannot invite users as Owners.");
         }
 
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "A user with this email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A user with this email already exists.");
         }
 
         Agency agency = agencyRepository.findById(TenantContext.getAgencyId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agency not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agency not found."));
 
         User newUser = User.builder()
                 .agency(agency)

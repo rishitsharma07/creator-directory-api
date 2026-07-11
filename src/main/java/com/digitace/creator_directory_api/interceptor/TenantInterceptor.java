@@ -34,8 +34,9 @@ public class TenantInterceptor implements HandlerInterceptor {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // 3. Lock the Agency ID into the ThreadLocal Vault
+            // 3. Lock the Agency ID and Role into the ThreadLocal Vault
             TenantContext.setAgencyId(user.getAgency().getId());
+            TenantContext.setRole(user.getRole()); // <-- VULNERABILITY SEALED
 
             return true; // The request is cleared to hit the controllers
 

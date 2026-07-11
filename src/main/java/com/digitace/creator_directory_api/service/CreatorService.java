@@ -6,6 +6,7 @@ import com.digitace.creator_directory_api.domain.AgencyCreatorLink;
 import com.digitace.creator_directory_api.domain.Creator;
 import com.digitace.creator_directory_api.domain.PlanType;
 import com.digitace.creator_directory_api.dto.CreateCreatorDto;
+import com.digitace.creator_directory_api.dto.LinkCreatorDto;
 import com.digitace.creator_directory_api.dto.UpdateCreatorDto;
 import com.digitace.creator_directory_api.repository.AgencyCreatorLinkRepository;
 import com.digitace.creator_directory_api.repository.AgencyRepository;
@@ -107,16 +108,57 @@ public class CreatorService {
         AgencyCreatorLink link = linkRepository.findIsolatedByCreatorId(creatorId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found in your directory"));
 
-        // 2. SEVER PROTOCOL: Delete ONLY the link.
+        // 2. GLOBAL CHECK: Is this the absolute last link keeping this creator alive?
+        long totalLinks = linkRepository.countGlobalLinksByCreatorId(creatorId);
+
+        // 3. SEVER PROTOCOL
         linkRepository.delete(link);
+
+        // 4. CLEANUP: If we were the last link, destroy the orphaned creator record.
+        if (totalLinks == 1) {
+            creatorRepository.delete(link.getCreator());
+        }
     }
 
     @Transactional(readOnly = true)
-    public Page<AgencyCreatorLink> searchAgencyCreators(String niche, Long minFollowers, Pageable pageable) {
-        // Handling nulls to pass default fallbacks safely
+    public Page<AgencyCreatorLink> searchAgencyCreators(String niche, Long minFollowers, Long maxFollowers, Pageable pageable) {
         String searchNiche = (niche != null && !niche.trim().isEmpty()) ? niche : null;
+        return linkRepository.searchIsolated(searchNiche, minFollowers, maxFollowers, pageable);
+    }
 
-        // We seamlessly hook into Member 1's highly secure repository query
-        return linkRepository.searchIsolated(searchNiche, minFollowers, pageable);
+    @Transactional
+    public void linkExistingCreator(UUID creatorId, LinkCreatorDto dto) {
+        UUID agencyId = TenantContext.getAgencyId();
+
+        Agency agency = agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agency not found"));
+
+        // 1. Enforce Plan Limits
+        if (agency.getPlan() == PlanType.FREE) {
+            long currentCreatorCount = linkRepository.countIsolatedLinks();
+            if (currentCreatorCount >= 5) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "FREE plan limit reached. Upgrade to PRO to add more creators.");
+            }
+        }
+
+        // 2. Verify creator actually exists globally
+        Creator creator = creatorRepository.findById(creatorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator does not exist in the global directory."));
+
+        // 3. Verify the agency isn't already linked to this creator
+        Optional<AgencyCreatorLink> existingLink = linkRepository.findIsolatedByCreatorId(creatorId);
+        if (existingLink.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Creator is already linked to your directory.");
+        }
+
+        // 4. Create and save the isolated link
+        AgencyCreatorLink newLink = AgencyCreatorLink.builder()
+                .agency(agency)
+                .creator(creator)
+                .notes(dto.getNotes())
+                .build();
+
+        linkRepository.save(newLink);
     }
 }

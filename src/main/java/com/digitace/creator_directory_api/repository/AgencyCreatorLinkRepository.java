@@ -32,15 +32,28 @@ public interface AgencyCreatorLinkRepository extends JpaRepository<AgencyCreator
             "WHERE link.agency.id = :#{T(com.digitace.creator_directory_api.context.TenantContext).getAgencyId()}")
     long countIsolatedLinks();
 
-    // 4. Search the caller's own linked creators, optionally filtered by niche
-    // and/or minimum follower count. The tenant check is a plain top-level
-    // AND with no OR anywhere near it, so it can never be bypassed by the
-    // optional filters -- each optional filter is fully parenthesized as its
-    // own independent "(:param IS NULL OR condition)" clause.
-    @Query("SELECT link FROM AgencyCreatorLink link JOIN FETCH link.creator " +
-            "WHERE link.agency.id = :#{T(com.digitace.creator_directory_api.context.TenantContext).getAgencyId()} " +
-            "AND (:niche IS NULL OR link.creator.niche = :niche) " +
-            "AND (:minFollowers IS NULL OR link.creator.followerCount >= :minFollowers)")
-    Page<AgencyCreatorLink> searchIsolated(@Param("niche") String niche, @Param("minFollowers") Long minFollowers, Pageable pageable);
+    // 4. Unified Search & List with full filtering and sorting support
+    @Query(
+            value = "SELECT link FROM AgencyCreatorLink link JOIN FETCH link.creator " +
+                    "WHERE link.agency.id = :#{T(com.digitace.creator_directory_api.context.TenantContext).getAgencyId()} " +
+                    "AND (:niche IS NULL OR link.creator.niche = :niche) " +
+                    "AND (:minFollowers IS NULL OR link.creator.followerCount >= :minFollowers) " +
+                    "AND (:maxFollowers IS NULL OR link.creator.followerCount <= :maxFollowers)",
+            countQuery = "SELECT COUNT(link) FROM AgencyCreatorLink link " +
+                    "WHERE link.agency.id = :#{T(com.digitace.creator_directory_api.context.TenantContext).getAgencyId()} " +
+                    "AND (:niche IS NULL OR link.creator.niche = :niche) " +
+                    "AND (:minFollowers IS NULL OR link.creator.followerCount >= :minFollowers) " +
+                    "AND (:maxFollowers IS NULL OR link.creator.followerCount <= :maxFollowers)"
+    )
+    Page<AgencyCreatorLink> searchIsolated(
+            @Param("niche") String niche,
+            @Param("minFollowers") Long minFollowers,
+            @Param("maxFollowers") Long maxFollowers,
+            Pageable pageable);
 
+
+    // 5. Global check to see how many agencies in total are linked to this creator
+    // We use this strictly during deletion to prevent orphaned records.
+    @Query("SELECT COUNT(link) FROM AgencyCreatorLink link WHERE link.creator.id = :creatorId")
+    long countGlobalLinksByCreatorId(@Param("creatorId") UUID creatorId);
 }
